@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build go1.13
+// +build go1.13
+
 package parse
 
 import (
@@ -394,7 +397,7 @@ var lexTests = []lexTest{
 
 // collect gathers the emitted items into a slice.
 func collect(t *lexTest, left, right string) (items []item) {
-	l := lex(t.name, t.input, left, right, true, true, true)
+	l := lex(t.name, t.input, left, right, true)
 	for {
 		item := l.nextItem()
 		items = append(items, item)
@@ -469,22 +472,6 @@ func TestDelims(t *testing.T) {
 	}
 }
 
-func TestDelimsAlphaNumeric(t *testing.T) {
-	test := lexTest{"right delimiter with alphanumeric start", "{{hub .host hub}}", []item{
-		mkItem(itemLeftDelim, "{{hub"),
-		mkItem(itemSpace, " "),
-		mkItem(itemField, ".host"),
-		mkItem(itemSpace, " "),
-		mkItem(itemRightDelim, "hub}}"),
-		tEOF,
-	}}
-	items := collect(&test, "{{hub", "hub}}")
-
-	if !equal(items, test.items, false) {
-		t.Errorf("%s: got\n\t%v\nexpected\n\t%v", test.name, items, test.items)
-	}
-}
-
 var lexPosTests = []lexTest{
 	{"empty", "", []item{{itemEOF, 0, "", 1}}},
 	{"punctuation", "{{,@%#}}", []item{
@@ -550,7 +537,7 @@ func TestPos(t *testing.T) {
 func TestShutdown(t *testing.T) {
 	// We need to duplicate template.Parse here to hold on to the lexer.
 	const text = "erroneous{{define}}{{else}}1234"
-	lexer := lex("foo", text, "{{", "}}", false, true, true)
+	lexer := lex("foo", text, "{{", "}}", false)
 	_, err := New("root").parseLexer(lexer)
 	if err == nil {
 		t.Fatalf("expected error")

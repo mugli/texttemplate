@@ -7,12 +7,13 @@ package template
 import (
 	"errors"
 	"fmt"
-	"internal/fmtsort"
 	"io"
 	"reflect"
 	"runtime"
 	"strings"
-	"text/template/parse"
+
+	"github.com/mugli/texttemplate/fmtsort"
+	"github.com/mugli/texttemplate/template/parse"
 )
 
 // maxExecDepth specifies the maximum stack depth of templates within
@@ -31,7 +32,7 @@ func initMaxExecDepth() int {
 // state represents the state of an execution. It's not part of the
 // template so that multiple executions of the same template
 // can execute in parallel.
-type state struct {
+type stateOld struct {
 	tmpl  *Template
 	wr    io.Writer
 	node  parse.Node // current node, for errors
@@ -315,7 +316,7 @@ func IsTrue(val any) (truth, ok bool) {
 	return isTrue(reflect.ValueOf(val))
 }
 
-func isTrue(val reflect.Value) (truth, ok bool) {
+func isTrueOld(val reflect.Value) (truth, ok bool) {
 	if !val.IsValid() {
 		// Something like var x interface{}, never set. It's a form of nil.
 		return false, true
@@ -591,7 +592,7 @@ func (s *state) evalFieldChain(dot, receiver reflect.Value, node parse.Node, ide
 	return s.evalField(dot, ident[n-1], node, args, final, receiver)
 }
 
-func (s *state) evalFunction(dot reflect.Value, node *parse.IdentifierNode, cmd parse.Node, args []parse.Node, final reflect.Value) reflect.Value {
+func (s *state) evalFunctionOld(dot reflect.Value, node *parse.IdentifierNode, cmd parse.Node, args []parse.Node, final reflect.Value) reflect.Value {
 	s.at(node)
 	name := node.Ident
 	function, isBuiltin, ok := findFunction(name, s.tmpl)
@@ -604,7 +605,7 @@ func (s *state) evalFunction(dot reflect.Value, node *parse.IdentifierNode, cmd 
 // evalField evaluates an expression like (.Field) or (.Field arg1 arg2).
 // The 'final' argument represents the return value from the preceding
 // value of the pipeline, if any.
-func (s *state) evalField(dot reflect.Value, fieldName string, node parse.Node, args []parse.Node, final, receiver reflect.Value) reflect.Value {
+func (s *state) evalFieldOld(dot reflect.Value, fieldName string, node parse.Node, args []parse.Node, final, receiver reflect.Value) reflect.Value {
 	if !receiver.IsValid() {
 		if s.tmpl.option.missingKey == mapError { // Treat invalid value as missing map key.
 			s.errorf("nil data; no entry for key %q", fieldName)
@@ -694,7 +695,7 @@ var (
 // evalCall executes a function or method call. If it's a method, fun already has the receiver bound, so
 // it looks just like a function call. The arg list, if non-nil, includes (in the manner of the shell), arg[0]
 // as the function itself.
-func (s *state) evalCall(dot, fun reflect.Value, isBuiltin bool, node parse.Node, name string, args []parse.Node, final reflect.Value) reflect.Value {
+func (s *state) evalCallOld(dot, fun reflect.Value, isBuiltin bool, node parse.Node, name string, args []parse.Node, final reflect.Value) reflect.Value {
 	if args != nil {
 		args = args[1:] // Zeroth arg is function name/node; not passed to function.
 	}
@@ -1015,7 +1016,7 @@ func (s *state) printValue(n parse.Node, v reflect.Value) {
 	if !ok {
 		s.errorf("can't print %s of type %s", n, v.Type())
 	}
-	fmt.Println("node:", n.String())
+	fmt.Println("node: ", n.String(), iface)
 	_, err := fmt.Fprint(s.wr, iface)
 	if err != nil {
 		s.writeError(err)
